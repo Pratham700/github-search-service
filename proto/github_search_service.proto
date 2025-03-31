@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "github.com/Pratham700/github-search-service/proto";
+
+package githubsearchservice;
+
+service GithubSearchService {
+  rpc Search (SearchRequest) returns (SearchResponse);
+}
+
+message SearchRequest {
+  string search_term = 1;
+  string user = 2;
+}
+
+message SearchResponse {
+  repeated Result results = 1;
+}
+
+message Result {
+  string file_url = 1;
+  string repo = 2;
+}
