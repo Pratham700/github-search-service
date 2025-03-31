@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/Pratham700/github-search-service/internal/github"
-	util "github.com/Pratham700/github-search-service/internal/util"
+	"github.com/Pratham700/github-search-service/internal/util"
 	pb "github.com/Pratham700/github-search-service/proto/proto"
 )
 
@@ -63,7 +63,7 @@ func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) 
 	var results []*pb.Result
 	for _, file := range files {
 		fileURL := github.ExtractFileURL(file)
-		repoName := github.ExtractRepoName(file)
+		repoName := github.ExtractRepoUrl(file)
 		if fileURL != "" && repoName != "" {
 			results = append(results, &pb.Result{
 				FileUrl: fileURL,

@@ -103,8 +103,8 @@ func ExtractFileURL(file map[string]interface{}) string {
 	return htmlURL
 }
 
-// ExtractRepoName extracts the repository name from the search result.
-func ExtractRepoName(file map[string]interface{}) string {
+// ExtractRepoUrl extracts the repository name from the search result.
+func ExtractRepoUrl(file map[string]interface{}) string {
 	repo, ok := file["repository"].(map[string]interface{})
 	if !ok {
 		return ""
@@ -113,5 +113,5 @@ func ExtractRepoName(file map[string]interface{}) string {
 	if !ok {
 		return ""
 	}
-	return fullName
+	return "https://github.com/" + fullName
 }

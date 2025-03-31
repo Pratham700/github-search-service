@@ -6,3 +6,6 @@ gen:
 
 run-server:
 	@go run cmd/server/main.go
+
+build-server:
+	@go build cmd/server/main.go

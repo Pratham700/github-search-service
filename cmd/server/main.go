@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -16,8 +17,9 @@ import (
 
 func main() {
 	// Set the port for the gRPC server
-	port := 50051
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	port := flag.Int("port", 50051, "The port number to listen on")
+	flag.Parse() // Parse the command-line flags
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -30,7 +32,7 @@ func main() {
 
 	// Start the gRPC server in a separate goroutine
 	go func() {
-		log.Printf("gRPC server listening on port %d", port)
+		log.Printf("gRPC server listening on port %d", *port)
 		if err := s.Serve(listener); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
