@@ -8,9 +8,24 @@ service GithubSearchService {
   rpc Search (SearchRequest) returns (SearchResponse);
 }
 
+enum SortOption {
+  SORT_UNSPECIFIED = 0; // Default value, often used to indicate no preference or an error
+  SORT_INDEXED = 1;
+}
+
+enum OrderOption {
+  ORDER_UNSPECIFIED = 0; // Default value
+  ORDER_ASC = 1;
+  ORDER_DESC = 2;
+}
+
 message SearchRequest {
   string search_term = 1;
   string user = 2;
+  SortOption sort = 3;
+  OrderOption order = 4;
+  optional int32 per_page = 5;
+  optional int32 page = 6;
 }
 
 message SearchResponse {

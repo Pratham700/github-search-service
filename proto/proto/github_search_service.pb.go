@@ -21,10 +21,109 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type SortOption int32
+
+const (
+	SortOption_SORT_UNSPECIFIED SortOption = 0 // Default value, often used to indicate no preference or an error
+	SortOption_SORT_INDEXED     SortOption = 1
+)
+
+// Enum value maps for SortOption.
+var (
+	SortOption_name = map[int32]string{
+		0: "SORT_UNSPECIFIED",
+		1: "SORT_INDEXED",
+	}
+	SortOption_value = map[string]int32{
+		"SORT_UNSPECIFIED": 0,
+		"SORT_INDEXED":     1,
+	}
+)
+
+func (x SortOption) Enum() *SortOption {
+	p := new(SortOption)
+	*p = x
+	return p
+}
+
+func (x SortOption) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SortOption) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_github_search_service_proto_enumTypes[0].Descriptor()
+}
+
+func (SortOption) Type() protoreflect.EnumType {
+	return &file_proto_github_search_service_proto_enumTypes[0]
+}
+
+func (x SortOption) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SortOption.Descriptor instead.
+func (SortOption) EnumDescriptor() ([]byte, []int) {
+	return file_proto_github_search_service_proto_rawDescGZIP(), []int{0}
+}
+
+type OrderOption int32
+
+const (
+	OrderOption_ORDER_UNSPECIFIED OrderOption = 0 // Default value
+	OrderOption_ORDER_ASC         OrderOption = 1
+	OrderOption_ORDER_DESC        OrderOption = 2
+)
+
+// Enum value maps for OrderOption.
+var (
+	OrderOption_name = map[int32]string{
+		0: "ORDER_UNSPECIFIED",
+		1: "ORDER_ASC",
+		2: "ORDER_DESC",
+	}
+	OrderOption_value = map[string]int32{
+		"ORDER_UNSPECIFIED": 0,
+		"ORDER_ASC":         1,
+		"ORDER_DESC":        2,
+	}
+)
+
+func (x OrderOption) Enum() *OrderOption {
+	p := new(OrderOption)
+	*p = x
+	return p
+}
+
+func (x OrderOption) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OrderOption) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_github_search_service_proto_enumTypes[1].Descriptor()
+}
+
+func (OrderOption) Type() protoreflect.EnumType {
+	return &file_proto_github_search_service_proto_enumTypes[1]
+}
+
+func (x OrderOption) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OrderOption.Descriptor instead.
+func (OrderOption) EnumDescriptor() ([]byte, []int) {
+	return file_proto_github_search_service_proto_rawDescGZIP(), []int{1}
+}
+
 type SearchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SearchTerm    string                 `protobuf:"bytes,1,opt,name=search_term,json=searchTerm,proto3" json:"search_term,omitempty"`
 	User          string                 `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	Sort          SortOption             `protobuf:"varint,3,opt,name=sort,proto3,enum=githubsearchservice.SortOption" json:"sort,omitempty"`
+	Order         OrderOption            `protobuf:"varint,4,opt,name=order,proto3,enum=githubsearchservice.OrderOption" json:"order,omitempty"`
+	PerPage       *int32                 `protobuf:"varint,5,opt,name=per_page,json=perPage,proto3,oneof" json:"per_page,omitempty"`
+	Page          *int32                 `protobuf:"varint,6,opt,name=page,proto3,oneof" json:"page,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -71,6 +170,34 @@ func (x *SearchRequest) GetUser() string {
 		return x.User
 	}
 	return ""
+}
+
+func (x *SearchRequest) GetSort() SortOption {
+	if x != nil {
+		return x.Sort
+	}
+	return SortOption_SORT_UNSPECIFIED
+}
+
+func (x *SearchRequest) GetOrder() OrderOption {
+	if x != nil {
+		return x.Order
+	}
+	return OrderOption_ORDER_UNSPECIFIED
+}
+
+func (x *SearchRequest) GetPerPage() int32 {
+	if x != nil && x.PerPage != nil {
+		return *x.PerPage
+	}
+	return 0
+}
+
+func (x *SearchRequest) GetPage() int32 {
+	if x != nil && x.Page != nil {
+		return *x.Page
+	}
+	return 0
 }
 
 type SearchResponse struct {
@@ -173,16 +300,31 @@ var File_proto_github_search_service_proto protoreflect.FileDescriptor
 
 const file_proto_github_search_service_proto_rawDesc = "" +
 	"\n" +
-	"!proto/github_search_service.proto\x12\x13githubsearchservice\"D\n" +
+	"!proto/github_search_service.proto\x12\x13githubsearchservice\"\x80\x02\n" +
 	"\rSearchRequest\x12\x1f\n" +
 	"\vsearch_term\x18\x01 \x01(\tR\n" +
 	"searchTerm\x12\x12\n" +
-	"\x04user\x18\x02 \x01(\tR\x04user\"G\n" +
+	"\x04user\x18\x02 \x01(\tR\x04user\x123\n" +
+	"\x04sort\x18\x03 \x01(\x0e2\x1f.githubsearchservice.SortOptionR\x04sort\x126\n" +
+	"\x05order\x18\x04 \x01(\x0e2 .githubsearchservice.OrderOptionR\x05order\x12\x1e\n" +
+	"\bper_page\x18\x05 \x01(\x05H\x00R\aperPage\x88\x01\x01\x12\x17\n" +
+	"\x04page\x18\x06 \x01(\x05H\x01R\x04page\x88\x01\x01B\v\n" +
+	"\t_per_pageB\a\n" +
+	"\x05_page\"G\n" +
 	"\x0eSearchResponse\x125\n" +
 	"\aresults\x18\x01 \x03(\v2\x1b.githubsearchservice.ResultR\aresults\"7\n" +
 	"\x06Result\x12\x19\n" +
 	"\bfile_url\x18\x01 \x01(\tR\afileUrl\x12\x12\n" +
-	"\x04repo\x18\x02 \x01(\tR\x04repo2h\n" +
+	"\x04repo\x18\x02 \x01(\tR\x04repo*4\n" +
+	"\n" +
+	"SortOption\x12\x14\n" +
+	"\x10SORT_UNSPECIFIED\x10\x00\x12\x10\n" +
+	"\fSORT_INDEXED\x10\x01*C\n" +
+	"\vOrderOption\x12\x15\n" +
+	"\x11ORDER_UNSPECIFIED\x10\x00\x12\r\n" +
+	"\tORDER_ASC\x10\x01\x12\x0e\n" +
+	"\n" +
+	"ORDER_DESC\x10\x022h\n" +
 	"\x13GithubSearchService\x12Q\n" +
 	"\x06Search\x12\".githubsearchservice.SearchRequest\x1a#.githubsearchservice.SearchResponseB3Z1github.com/Pratham700/github-search-service/protob\x06proto3"
 
@@ -198,21 +340,26 @@ func file_proto_github_search_service_proto_rawDescGZIP() []byte {
 	return file_proto_github_search_service_proto_rawDescData
 }
 
+var file_proto_github_search_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_proto_github_search_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_proto_github_search_service_proto_goTypes = []any{
-	(*SearchRequest)(nil),  // 0: githubsearchservice.SearchRequest
-	(*SearchResponse)(nil), // 1: githubsearchservice.SearchResponse
-	(*Result)(nil),         // 2: githubsearchservice.Result
+	(SortOption)(0),        // 0: githubsearchservice.SortOption
+	(OrderOption)(0),       // 1: githubsearchservice.OrderOption
+	(*SearchRequest)(nil),  // 2: githubsearchservice.SearchRequest
+	(*SearchResponse)(nil), // 3: githubsearchservice.SearchResponse
+	(*Result)(nil),         // 4: githubsearchservice.Result
 }
 var file_proto_github_search_service_proto_depIdxs = []int32{
-	2, // 0: githubsearchservice.SearchResponse.results:type_name -> githubsearchservice.Result
-	0, // 1: githubsearchservice.GithubSearchService.Search:input_type -> githubsearchservice.SearchRequest
-	1, // 2: githubsearchservice.GithubSearchService.Search:output_type -> githubsearchservice.SearchResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // 0: githubsearchservice.SearchRequest.sort:type_name -> githubsearchservice.SortOption
+	1, // 1: githubsearchservice.SearchRequest.order:type_name -> githubsearchservice.OrderOption
+	4, // 2: githubsearchservice.SearchResponse.results:type_name -> githubsearchservice.Result
+	2, // 3: githubsearchservice.GithubSearchService.Search:input_type -> githubsearchservice.SearchRequest
+	3, // 4: githubsearchservice.GithubSearchService.Search:output_type -> githubsearchservice.SearchResponse
+	4, // [4:5] is the sub-list for method output_type
+	3, // [3:4] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_github_search_service_proto_init() }
@@ -220,18 +367,20 @@ func file_proto_github_search_service_proto_init() {
 	if File_proto_github_search_service_proto != nil {
 		return
 	}
+	file_proto_github_search_service_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_github_search_service_proto_rawDesc), len(file_proto_github_search_service_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      2,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_proto_github_search_service_proto_goTypes,
 		DependencyIndexes: file_proto_github_search_service_proto_depIdxs,
+		EnumInfos:         file_proto_github_search_service_proto_enumTypes,
 		MessageInfos:      file_proto_github_search_service_proto_msgTypes,
 	}.Build()
 	File_proto_github_search_service_proto = out.File

@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"log"
 	"os"
 	"strconv"
 
 	"github.com/Pratham700/github-search-service/internal/github"
-	"github.com/Pratham700/github-search-service/internal/util"
 	pb "github.com/Pratham700/github-search-service/proto/proto"
 )
 
@@ -44,14 +42,10 @@ func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) 
 	}
 
 	// Extract GitHub API parameters from metadata
-	md, ok := metadata.FromIncomingContext(ctx)
 	githubParams := make(map[string]string)
-	if ok {
-		var err error
-		githubParams, err = extractGithubSearchParams(md)
-		if err != nil {
-			return nil, err // Return the gRPC error
-		}
+
+	if err := s.processSearchParameters(req, githubParams); err != nil {
+		return nil, err
 	}
 
 	// Call the GitHub API to search for files
@@ -80,57 +74,56 @@ func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) 
 	}, nil
 }
 
-// extractGithubSearchParams extracts optional GitHub Search API parameters from gRPC metadata.
-func extractGithubSearchParams(md metadata.MD) (map[string]string, error) {
-	params := make(map[string]string)
-
-	// Define validation functions
-	validators := map[string]func(string) error{
-		"sort": func(value string) error {
-			if value != "indexed" {
-				return fmt.Errorf("allowed value: 'indexed'")
-			}
+// processSearchParameters extracts and validates enum parameters.
+func (s *GithubSearchServer) processSearchParameters(req *pb.SearchRequest, githubParams map[string]string) error {
+	// Helper function to handle enum to string mapping
+	mapEnumToString := func(enumValue int32, mapping map[int32]string, paramName string) error {
+		if stringValue, ok := mapping[enumValue]; ok {
+			githubParams[paramName] = stringValue
 			return nil
-		},
-		"order": func(value string) error {
-			if value != "asc" && value != "desc" {
-				return fmt.Errorf("allowed values: 'asc', 'desc'")
-			}
-			return nil
-		},
-		"per_page": func(value string) error {
-			perPage, err := strconv.Atoi(value)
-			if err != nil || perPage < 1 || perPage > 100 {
-				return fmt.Errorf("must be an integer between 1 and 100")
-			}
-			return nil
-		},
-		"page": func(value string) error {
-			page, err := strconv.Atoi(value)
-			if err != nil || page < 1 {
-				return fmt.Errorf("must be an integer greater than or equal to 1")
-			}
-			return nil
-		},
-	}
-
-	// Helper function to validate and extract metadata values
-	extractAndValidate := func(key string, validate func(string) error) error {
-		if value, ok := util.ExtractMetadataValue(md, key); ok {
-			if err := validate(value); err != nil {
-				return status.Errorf(codes.InvalidArgument, "invalid value for '%s': %s", key, err)
-			}
-			params[key] = value
+		} else if enumValue != 0 {
+			log.Printf("Received invalid %s option: %v", paramName, enumValue)
+			return status.Errorf(codes.InvalidArgument, "invalid %s option: %v", paramName, enumValue)
 		}
-		return nil
+		return nil // No error for UNSPECIFIED
 	}
 
-	// Iterate over the validators map
-	for key, validate := range validators {
-		if err := extractAndValidate(key, validate); err != nil {
-			return nil, err
+	// Define the mappings for SortOption and OrderOption
+	sortMapping := map[int32]string{
+		int32(pb.SortOption_SORT_INDEXED): "indexed",
+	}
+
+	orderMapping := map[int32]string{
+		int32(pb.OrderOption_ORDER_ASC):  "asc",
+		int32(pb.OrderOption_ORDER_DESC): "desc",
+	}
+
+	// Process SortOption
+	if err := mapEnumToString(int32(req.GetSort()), sortMapping, "sort"); err != nil {
+		return err
+	}
+
+	// Process OrderOption
+	if err := mapEnumToString(int32(req.GetOrder()), orderMapping, "order"); err != nil {
+		return err
+	}
+
+	// Handle per_page
+	perPage := req.GetPerPage()
+	if perPage > 0 {
+		if perPage < 1 || perPage > 100 {
+			return status.Errorf(codes.InvalidArgument, "invalid value for 'per_page': must be an integer between 1 and 100")
 		}
+		githubParams["per_page"] = strconv.Itoa(int(perPage))
 	}
 
-	return params, nil
+	// Handle page
+	page := req.GetPage()
+	if page > 0 {
+		if page < 1 {
+			return status.Errorf(codes.InvalidArgument, "invalid value for 'page': must be an integer greater than or equal to 1")
+		}
+		githubParams["page"] = strconv.Itoa(int(page))
+	}
+	return nil
 }
