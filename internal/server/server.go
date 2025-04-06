@@ -13,6 +13,11 @@ import (
 	pb "github.com/Pratham700/github-search-service/proto/proto"
 )
 
+const (
+	minPerPage = 1
+	maxPerPage = 100
+)
+
 type GithubSearchServer struct {
 	pb.UnimplementedGithubSearchServiceServer
 	gitHubClient *github.GitHubClient
@@ -35,26 +40,38 @@ func NewGithubSearchServer() (*GithubSearchServer, error) {
 func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
 	log.Printf("Received Search request: SearchTerm=%s, User=%s", req.SearchTerm, req.User)
 
-	// Retrieve the GitHub token from the context using the helper function
 	authToken, err := GetAuthTokenFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get github token from context: %w", err)
 	}
 
-	// Extract GitHub API parameters from metadata
-	githubParams := make(map[string]string)
-
-	if err := s.processSearchParameters(req, githubParams); err != nil {
+	githubParams, err := s.buildGitHubParams(req)
+	if err != nil {
 		return nil, err
 	}
 
-	// Call the GitHub API to search for files
 	files, err := s.gitHubClient.SearchFiles(ctx, req.SearchTerm, req.User, authToken, githubParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search files on GitHub: %w", err)
 	}
 
-	// Prepare the response
+	results := transformGitHubResults(files)
+	log.Printf("Found %d results", len(results))
+
+	return &pb.SearchResponse{
+		Results: results,
+	}, nil
+}
+
+func (s *GithubSearchServer) buildGitHubParams(req *pb.SearchRequest) (map[string]string, error) {
+	githubParams := make(map[string]string)
+	if err := s.processSearchParameters(req, githubParams); err != nil {
+		return nil, err
+	}
+	return githubParams, nil
+}
+
+func transformGitHubResults(files []github.GitHubSearchItem) []*pb.Result {
 	var results []*pb.Result
 	for _, file := range files {
 		fileURL := github.ExtractFileURL(file)
@@ -66,12 +83,7 @@ func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) 
 			})
 		}
 	}
-
-	log.Printf("Found %d results", len(results))
-
-	return &pb.SearchResponse{
-		Results: results,
-	}, nil
+	return results
 }
 
 // processSearchParameters extracts and validates enum parameters.
@@ -111,7 +123,7 @@ func (s *GithubSearchServer) processSearchParameters(req *pb.SearchRequest, gith
 	// Handle per_page
 	perPage := req.GetPerPage()
 	if perPage > 0 {
-		if perPage < 1 || perPage > 100 {
+		if perPage < minPerPage || perPage > maxPerPage {
 			return status.Errorf(codes.InvalidArgument, "invalid value for 'per_page': must be an integer between 1 and 100")
 		}
 		githubParams["per_page"] = strconv.Itoa(int(perPage))
