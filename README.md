@@ -76,7 +76,7 @@ Protocol Buffers (proto) file:
 
     * Clients need to implement the gRPC client code as per the proto definition.
     * Required Metadata key for passing the token with request `github-token` having the value of the GitHub Fine-Grained Personal Access Token.
-    * Optional search parameters (`sort`, `order`, `per_page`, `page`) can be sent as metadata with the gRPC request.
+    * Optional search parameters (`sort`, `order`, `per_page`, `page`) can be sent with the gRPC request message itself.
 
 ## Author
 
