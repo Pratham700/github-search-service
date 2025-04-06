@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/Pratham700/github-search-service/internal/github"
 	"github.com/Pratham700/github-search-service/internal/util"
@@ -16,11 +17,11 @@ import (
 
 type GithubSearchServer struct {
 	pb.UnimplementedGithubSearchServiceServer
-	GitHubClient *github.GitHubClient
+	gitHubClient *github.GitHubClient
 }
 
 // NewGithubSearchServer creates a new GithubSearchServer.
-func NewGithubSearchServer() *GithubSearchServer {
+func NewGithubSearchServer() (*GithubSearchServer, error) {
 	// Read the GitHub API base URL from an environment variable (optional)
 	baseURL := os.Getenv("GITHUB_BASE_URL")
 	if baseURL == "" {
@@ -28,8 +29,8 @@ func NewGithubSearchServer() *GithubSearchServer {
 	}
 
 	return &GithubSearchServer{
-		GitHubClient: github.NewGitHubClient(baseURL),
-	}
+		gitHubClient: github.NewGitHubClient(baseURL),
+	}, nil
 }
 
 // Search implements the Search gRPC method.
@@ -54,7 +55,7 @@ func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) 
 	}
 
 	// Call the GitHub API to search for files
-	files, err := s.GitHubClient.SearchFiles(ctx, req.SearchTerm, req.User, authToken, githubParams)
+	files, err := s.gitHubClient.SearchFiles(ctx, req.SearchTerm, req.User, authToken, githubParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search files on GitHub: %w", err)
 	}
@@ -82,45 +83,54 @@ func (s *GithubSearchServer) Search(ctx context.Context, req *pb.SearchRequest) 
 // extractGithubSearchParams extracts optional GitHub Search API parameters from gRPC metadata.
 func extractGithubSearchParams(md metadata.MD) (map[string]string, error) {
 	params := make(map[string]string)
-	// Extract optional GitHub Search API parameters safely
-	var ok bool
-	var value string
 
-	// Validate 'sort'
-	if value, ok = util.ExtractMetadataValue(md, "sort"); ok {
-		if value != "indexed" {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid value for 'sort': %s. Allowed value: 'indexed'", value)
-		}
-		params["sort"] = value
+	// Define validation functions
+	validators := map[string]func(string) error{
+		"sort": func(value string) error {
+			if value != "indexed" {
+				return fmt.Errorf("allowed value: 'indexed'")
+			}
+			return nil
+		},
+		"order": func(value string) error {
+			if value != "asc" && value != "desc" {
+				return fmt.Errorf("allowed values: 'asc', 'desc'")
+			}
+			return nil
+		},
+		"per_page": func(value string) error {
+			perPage, err := strconv.Atoi(value)
+			if err != nil || perPage < 1 || perPage > 100 {
+				return fmt.Errorf("must be an integer between 1 and 100")
+			}
+			return nil
+		},
+		"page": func(value string) error {
+			page, err := strconv.Atoi(value)
+			if err != nil || page < 1 {
+				return fmt.Errorf("must be an integer greater than or equal to 1")
+			}
+			return nil
+		},
 	}
-	// Validate 'order'
-	if value, ok = util.ExtractMetadataValue(md, "order"); ok {
-		if value != "asc" && value != "desc" {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid value for 'order': %s. Allowed values: 'asc', 'desc'", value)
+
+	// Helper function to validate and extract metadata values
+	extractAndValidate := func(key string, validate func(string) error) error {
+		if value, ok := util.ExtractMetadataValue(md, key); ok {
+			if err := validate(value); err != nil {
+				return status.Errorf(codes.InvalidArgument, "invalid value for '%s': %s", key, err)
+			}
+			params[key] = value
 		}
-		params["order"] = value
+		return nil
 	}
-	// Validate 'per_page'
-	if value, ok = util.ExtractMetadataValue(md, "per_page"); ok {
-		var perPage int
-		if _, err := fmt.Sscan(value, &perPage); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid value for 'per_page': %s. Must be an integer", value)
+
+	// Iterate over the validators map
+	for key, validate := range validators {
+		if err := extractAndValidate(key, validate); err != nil {
+			return nil, err
 		}
-		if perPage < 1 || perPage > 100 {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid value for 'per_page': %s. Must be between 1 and 100", value)
-		}
-		params["per_page"] = value
 	}
-	// Validate 'page'
-	if value, ok = util.ExtractMetadataValue(md, "page"); ok {
-		var page int
-		if _, err := fmt.Sscan(value, &page); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid value for 'page': %s. Must be an integer", value)
-		}
-		if page < 1 {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid value for 'page': %s. Must be greater than or equal to 1", value)
-		}
-		params["page"] = value
-	}
+
 	return params, nil
 }

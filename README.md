@@ -23,26 +23,11 @@ This repository contains a gRPC service that acts as a proxy for searching code 
 ## API Specification
 
 The service implements the following gRPC API:
+ 
+Protocol Buffers (proto) file:
 
-```protobuf
-service GithubSearchService {
-  rpc Search (SearchRequest) returns (SearchResponse);
-}
+[Link to client.go on GitHub](https://github.com/Pratham700/github-search-service/blob/proto/github_search.proto)
 
-message SearchRequest {
-  required string search_term = 1;
-  required string user = 2;
-}
-
-message SearchResponse {
-  repeated Result results = 1;
-}
-
-message Result {
-  required string file_url = 1;
-  required string repo = 2;
-}
-```
 ## Search RPC
 - **Description:** Performs a code search on GitHub.
 - **Request:** SearchRequest message containing the search_term and optional user.
@@ -64,7 +49,7 @@ message Result {
 1.  Clone the repository:
 
     ```bash
-    git clone [https://github.com/Pratham700/github-search-service.git](https://github.com/Pratham700/github-search-service.git)
+    git clone https://github.com/Pratham700/github-search-service.git
     ```
 
 2.  Navigate to the project directory:
@@ -90,8 +75,10 @@ message Result {
 2.  Clients can then make gRPC calls to the `GithubSearchService` to search for code.
 
     * Clients need to implement the gRPC client code as per the proto definition.
+    * Required Metadata key for passing the token with request `github-token` having the value of the GitHub Fine-Grained Personal Access Token.
     * Optional search parameters (`sort`, `order`, `per_page`, `page`) can be sent as metadata with the gRPC request.
 
 ## Author
 
 * Pratham700
+* 

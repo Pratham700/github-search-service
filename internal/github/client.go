@@ -4,33 +4,56 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // GitHubClient is a client for interacting with the GitHub API.
 type GitHubClient struct {
-	client    *http.Client
-	authToken string // GitHub Personal Access Token
-	baseURL   string // Base URL for the GitHub API
+	client *http.Client
+
+	// Base URL for the GitHub API
+	baseURL string
+}
+
+type GithubSearchCodeResponse struct {
+	TotalCount        int                `json:"total_count"`
+	IncompleteResults bool               `json:"incomplete_results"`
+	Items             []GitHubSearchItem `json:"items"`
+}
+
+type GitHubSearchItem struct {
+	Name       string `json:"name"`
+	Path       string `json:"path"`
+	HTMLURL    string `json:"html_url"`
+	Repository GitHubRepository
+}
+
+type GitHubRepository struct {
+	ID          int    `json:"id"`
+	NodeID      string `json:"node_id"`
+	Name        string `json:"name"`
+	FullName    string `json:"full_name"`
+	Private     bool   `json:"private"`
+	HTMLURL     string `json:"html_url"`
+	Description string `json:"description"`
 }
 
 // NewGitHubClient creates a new GitHubClient.
-// It now takes the GitHub Personal Access Token and the base URL as arguments.
+// It now takes the base URL as argument.
 func NewGitHubClient(baseURL string) *GitHubClient {
-	if baseURL == "" {
-		baseURL = "https://api.github.com" // Default base URL
-	}
 	return &GitHubClient{
-		client:  &http.Client{},
+		client:  &http.Client{Timeout: time.Second * 5},
 		baseURL: baseURL,
 	}
 }
 
 // SearchFiles searches for files on GitHub based on the provided search term and user.
-func (c *GitHubClient) SearchFiles(ctx context.Context, searchTerm string, user string, authToken string, githubParams map[string]string) ([]map[string]interface{}, error) {
+func (c *GitHubClient) SearchFiles(ctx context.Context, searchTerm string, user string, authToken string, githubParams map[string]string) ([]GitHubSearchItem, error) {
 	// Construct the API URL
-	relativeURL := "/search/code" // Relative URL for the search endpoint
+	const relativeURL = "/search/code" // Relative URL for the search endpoint
 	apiURL := c.baseURL + relativeURL
 
 	queryParams := url.Values{}
@@ -67,51 +90,35 @@ func (c *GitHubClient) SearchFiles(ctx context.Context, searchTerm string, user 
 
 	// Check if the request was successful
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned an error: %s", resp.Status)
+		// Extract the response body for logging and debugging
+		var responseBody string
+		if bodyBytes, err := io.ReadAll(resp.Body); err == nil {
+			responseBody = string(bodyBytes)
+		} else {
+			responseBody = "failed to read response body"
+		}
+		return nil, fmt.Errorf("GitHub API returned an error: %s (status code: %d, response: %s)", resp.Status, resp.StatusCode, responseBody)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body) // Read the entire response body again
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body for decoding: %w", err)
 	}
 
 	// Parse the response
-	var result map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var result GithubSearchCodeResponse
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-
-	// Extract the items from the response
-	items, ok := result["items"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("failed to parse items from response")
-	}
-
-	var files []map[string]interface{}
-	for _, item := range items {
-		file, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		files = append(files, file)
-	}
-
-	return files, nil
+	return result.Items, nil
 }
 
 // ExtractFileURL extracts the file URL from the search result.
-func ExtractFileURL(file map[string]interface{}) string {
-	htmlURL, ok := file["html_url"].(string)
-	if !ok {
-		return ""
-	}
-	return htmlURL
+func ExtractFileURL(item GitHubSearchItem) string {
+	return item.HTMLURL
 }
 
 // ExtractRepoUrl extracts the repository name from the search result.
-func ExtractRepoUrl(file map[string]interface{}) string {
-	repo, ok := file["repository"].(map[string]interface{})
-	if !ok {
-		return ""
-	}
-	fullName, ok := repo["full_name"].(string)
-	if !ok {
-		return ""
-	}
-	return "https://github.com/" + fullName
+func ExtractRepoUrl(item GitHubSearchItem) string {
+	return "https://github.com/" + item.Repository.FullName // Access using dot notation
 }
