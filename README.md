@@ -1,4 +1,4 @@
-# GoLang Search Code gRPC Service
+# Go Search Code gRPC Service
 
 ## Overview
 
