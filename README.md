@@ -1,4 +1,4 @@
-# GitHub Search Service (gRPC)
+# GoLang Search Code gRPC Service
 
 ## Overview
 
